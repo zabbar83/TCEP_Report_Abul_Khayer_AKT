@@ -1,0 +1,77 @@
+SELECT             t.teritory_name AS territoryName,
+                                       z.teritory_name AS zoneName,
+                                       r.teritory_name AS routeName,
+                                       c.TRADE_LICENSE_NAME AS outletName,
+                                       c.CUSTOMER_NAME AS outletOwner,
+                                       c.MOBILE_NO AS outletMobile,
+                                       ba.br_team_team_id AS teamId,
+                                       bt.team_name AS teamName,
+                                       bu.user_name AS brUserName,
+                                       brep.name AS brName,
+                                       CASE
+                                           WHEN brep.br_designation = 3 THEN 'BR'
+                                       END AS brDesignation,
+                                       brep.contact_number AS brMobile,
+                                       ba.add_date_time AS addDate,
+                                       bc.customer_name AS customerName,
+                                       bc.age AS customerAge,
+                                       bcon.contact_number AS customerMobile,
+                                       bc.district AS district,
+                                       bc.thana AS thana,
+                                       bc.id AS brActivityConsumerId,
+                                       bc.customer_address AS customerAddress,
+                                       ba.is_repeat_contact AS isRepeatContact,
+                                       ba.ID AS brActivityId,
+                                       ba.consumer_type as consumerType,
+                                       ba.CLUSTER_NAME as clusterName,
+                                       NVL(CASE
+                                           WHEN ba.using_brand = 19 THEN 'ESSE_SLIM'
+                                           WHEN ba.using_brand = 20 THEN 'MOND_SLIM'
+                                           WHEN ba.using_brand = 21 THEN 'ORIS_SLIM'
+                                           WHEN ba.using_brand = 22 THEN 'XSO_SLIM'
+                                           WHEN ba.using_brand = 23 THEN 'ORIS_NANO'
+                                           WHEN ba.using_brand = 24 THEN 'PATRON_NANO'
+                                           WHEN ba.using_brand = 17 THEN 'CAMEL'
+                                           WHEN ba.using_brand = 25 THEN 'JPGL'
+                                           WHEN ba.using_brand = 26 THEN 'B_H_L'
+                                           WHEN ba.using_brand = 27 THEN 'B_H_S'
+                                           WHEN ba.using_brand = 28 THEN 'MARLBORO'
+                                           WHEN ba.using_brand = 12 THEN 'LUCKY_STRIKE'
+                                       END,'OTHERS') AS usingBrand,
+                                       p.product_name AS offeredBrand,
+                                       p.product_id AS offeredBrandProductId,
+                                       ba.contact_module AS contactModule,
+                                       CASE
+                                           WHEN ba.swapping_no >0 then 'Yes'
+                                           ELSE 'No'
+                                       END AS swappingStatus,
+                                       CASE
+                                           WHEN ba.swapping_no =1 then 1
+                                           ELSE 0
+                                       END AS swapping1,
+                                       CASE
+                                           WHEN vs.product_quantity =10 then 'Yes'
+                                           ELSE 'No'
+                                       END AS vaoStatus,
+                                       CASE
+                                           WHEN vs.product_quantity =10 then 1
+                                           ELSE 0
+                                       END AS supremeVaoQty
+                                FROM bractivity ba
+                                JOIN teritory r ON r.id = ba.route_id
+                                JOIN teritory z ON z.id = r.parent_id
+                                JOIN teritory t ON t.id = z.parent_id
+                                JOIN teritory d ON d.id = t.parent_id
+                                JOIN bruser bu ON ba.br_user_id = bu.user_id
+                                JOIN brand_representative brep ON ba.br_user_id = brep.br_user_user_id
+                                JOIN brteam bt ON ba.br_team_team_id = bt.team_id
+                                JOIN consumer c ON c.id = ba.outlet_id
+                                JOIN bractivity_consumer bc ON ba.br_activity_consumer_id = bc.id
+                                JOIN bractivity_contact bcon ON bc.br_activity_contact_id = bcon.id
+                                JOIN product p ON ba.offered_brand = p.product_id
+                                AND  p.product_desc='Black Diamond'
+                                LEFT JOIN vao_sale vs ON vs.bractivity_id = ba.id
+                                WHERE d.id like :divisionId || '%'
+                                and   t.id like :teritoryId || '%'
+                                AND to_char(ba.target_date, 'dd-mm-yyyy') = :targetDate
+                                ORDER BY ba.id DESC

@@ -1,0 +1,63 @@
+select  
+                           DISTINCT
+                           vta.WING_ID wingId,
+                           vta.WING_NAME wingName,
+                           vta.DIVISION_ID divisionId,
+                           vta.DIVISION_NAME divisionName,
+                           vta.TERITORY_ID teritoryId,
+                           vta.TERITORY_NAME teritoryName,
+                           bru.user_name userName,
+                           bru.br_name brName,
+                           bru.status attenStatus,
+                           NVL(bru.statusNo,0) * 30 contactTarget,
+                           NVL(bd10,0)bd10,
+                           NVL(bd20,0)bd20,
+                           NVL(total_bd_con,0) totalBdCon,
+                           ROUND(case when (NVL(bru.statusNo,0) * 30) > 0 then (NVL(total_bd_con,0) / (NVL(bru.statusNo,0) * 30) ) * 100 else 0 end,2) totalConAch,
+                           
+                           NVL(bru.statusNo,0) * 30 sawppingTarget,
+                           NVL(bdSwapping,0)bdSwapping,
+                           ROUND(case when (NVL(bru.statusNo,0) * 30) > 0 then (NVL(bdSwapping,0) / (NVL(bru.statusNo,0) * 30) ) * 100 else 0 end,2) sawppingAch,
+                   
+                           NVL(bru.statusNo,0) * 5 vaoTarget,
+                           NVL(bdVao,0)bdVao,
+                           ROUND(case when (NVL(bru.statusNo,0) * 5) > 0 then (NVL(bdVao,0) / (NVL(bru.statusNo,0) * 5) ) * 100 else 0 end,2) vaoAch
+                   from    (select * from v_teritory_all
+                   where   division_id like :divisionId || '%'
+                   and     teritory_id like :teritoryId || '%')vta
+                   JOIN    (
+                           select  
+                           bu.teritory_id,
+                           br_user,
+                           bu.user_name,
+                           br.name br_name,
+                           status,
+                           case when status='PRESENT' then 1 else 0 end statusNo,
+                           att_time
+                   from
+                          ((SELECT ba.BR_USER_USER_ID br_user, 'PRESENT' status, TO_CHAR(ba.ATTENDANCE_DATE_TIME, 'dd-mm-yyyy') att_time
+                           FROM BRUSER_ATTENDANCE ba  
+                           WHERE TO_CHAR(ba.ATTENDANCE_DATE_TIME, 'dd-mm-yyyy')=:targetDate)
+                           UNION all
+                           (SELECT bul.BR_USER_USER_ID br_user,'ABSENT' status, TO_CHAR(bul.LEAVE_DATE_TIME, 'dd-mm-yyyy') att_time
+                           FROM BR_USER_LEAVE bul 
+                           WHERE TO_CHAR(bul.LEAVE_DATE_TIME, 'dd-mm-yyyy')=:targetDate)) br_user
+                           JOIN BRUSER_ROLES br ON br_user.br_user = br.BRUSER_USER_ID
+                           and  ROLES_ID=14
+                           JOIN BRUSER bu ON br_user.br_user = bu.USER_ID 
+                           AND bu.IS_ACCOUNT_NON_EXPIRED = 1
+                           JOIN brand_representative br on bu.user_id=br.br_user_user_id
+                           ) bru
+                           ON vta.teritory_id=bru.teritory_id
+                   LEFT    JOIN (select  ba.br_user_id,
+                                   count(distinct (case when ba.offered_brand = 22 then ba.id else null end)) bd10,
+                                   count(distinct (case when ba.offered_brand = 23 then ba.id else null end)) bd20,
+                                   count(distinct (case when ba.offered_brand IN (22,23) then ba.id else null end)) total_bd_con,
+                                   sum(case when ba.offered_brand IN (22,23) and SWAPPING_NO =1 then 1 else 0 end) bdSwapping,
+                                   sum(case when vs.product_id in (22,23) and vs.product_quantity =10 then vs.quantity else 0 end) bdVao
+                           from    (select * from bractivity where TO_CHAR(TARGET_DATE, 'dd-mm-yyyy')=:targetDate) ba
+                           LEFT    JOIN vao_sale vs on ba.id=vs.bractivity_id
+                           group   by ba.br_user_id
+                           ) bac
+                           ON bru.br_user=bac.br_user_id
+                   ORDER   by vta.WING_ID, vta.DIVISION_ID, vta.TERITORY_ID, bru.user_name

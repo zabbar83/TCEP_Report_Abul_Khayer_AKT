@@ -1,0 +1,100 @@
+select  DISTINCT
+        vta.WING_ID wingId,
+        vta.WING_NAME wingName,
+        vta.DIVISION_ID divisionId,
+        vta.DIVISION_NAME divisionName,
+        vta.TERITORY_ID teritoryId,
+        vta.TERITORY_NAME teritoryName,
+        pa.allocation allocation,
+        NVL(bat.user_attendance,0) userAttendance,
+        NVL(bat.user_attendance,0) * 30 contactTarget,
+        NVL(regMax10s,0) regMax10s,
+        NVL(regMax20s,0) regMax20s,
+        NVL(bolMax10s,0) bolMax10s,
+        NVL(bolMax20s,0) bolMax20s,
+        NVL(total_con,0) totalCon,
+        ROUND(case when (NVL(bat.user_attendance,0) * 30) > 0 then (NVL(total_con,0) / (NVL(bat.user_attendance,0) * 30) ) * 100 else 0 end,2) totalConAch,
+        
+        NVL(bat.user_attendance,0) * 30 swappingTarget,
+        NVL(regSwaMax,0) regSwaMax,
+        NVL(bolSwaMax,0) bolSwaMax,
+        NVL(swappingCon,0) swappingCon,
+        ROUND(case when (NVL(bat.user_attendance,0) * 30) > 0 then (NVL(swappingCon,0) / (NVL(bat.user_attendance,0) * 30) ) * 100 else 0 end,2) swappingAch,
+        
+        NVL(bat.user_attendance,0) * 30 samplingTarget,
+        NVL(regSamMax,0) regSamMax,
+        NVL(bolSamMax,0) bolSamMax,
+        NVL(samplingCon,0) samplingCon,
+        ROUND(case when (NVL(bat.user_attendance,0) * 30) > 0 then (NVL(samplingCon,0) / (NVL(bat.user_attendance,0) * 30) ) * 100 else 0 end,2) samplingAch,
+        
+        NVL(bat.user_attendance,0) * 7 vao5sTarget,
+        NVL(vaoLig5s,0)vaoLig5s,
+        NVL(vaoBan10s,0)vaoBan10s,
+        NVL(vaoDeo10s,0)vaoDeo10s,
+        NVL(vaoBan20s,0)vaoBan20s,
+        NVL(vaoDeo20s,0)vaoDeo20s,
+        NVL(vaoTotal,0) vaoTotal,
+        ROUND(case when (NVL(bat.user_attendance,0) * 7) > 0 then (NVL(vaoTotal,0) / (NVL(bat.user_attendance,0) * 7) ) * 100 else 0 end,2) vaoTotalAch
+FROM    ASSIGN_POSITION_ALLOCATION apa 
+JOIN    POSITION_ALLOCATION_POLICY pap ON apa.POSITION_ALLOCATION_POLICY_ID = pap.ID  
+and     TO_CHAR(apa.TARGET_DATE, 'dd-mm-yyyy')=:targetDate
+JOIN    POSITION_ALLOCATION pa ON (pa.POSITION_ALLOCATION_POLICY_ID = pap.ID and pa.role_id=14)
+JOIN    V_TERITORY_ALL vta ON apa.TERITORY_ID = vta.TERITORY_ID
+and     vta.division_id like :divisionId || '%'
+and     vta.teritory_id like :teritoryId || '%'
+LEFT    JOIN (SELECT  bu.TERITORY_ID,count(bua.BR_USER_USER_ID) user_attendance
+            FROM    bruser bu 
+            JOIN    bruser_attendance bua ON bua.BR_USER_USER_ID = bu.USER_ID 
+            AND     TO_CHAR(bua.ATTENDANCE_DATE_TIME, 'dd-mm-yyyy')=:targetDate
+            JOIN    bruser_roles bur ON (bur.BRUSER_USER_ID = bu.USER_ID and bur.ROLES_ID = 14)
+            WHERE   bu.IS_ACCOUNT_NON_EXPIRED = 1
+            GROUP   BY bu.TERITORY_ID)bat
+            ON apa.TERITORY_ID = bat.TERITORY_ID
+LEFT    JOIN (select  vt.teritory_id,
+                sum(regMax10s)regMax10s,
+                sum(regMax20s)regMax20s,
+                sum(bolMax10s)bolMax10s,
+                sum(bolMax20s)bolMax20s,
+                sum(total_con)total_con,
+                sum(regSwaMax)regSwaMax,
+                sum(bolSwaMax)bolSwaMax,
+                sum(swappingCon)swappingCon,
+                sum(regSamMax)regSamMax,
+                sum(bolSamMax)bolSamMax,
+                sum(samplingCon)samplingCon,
+                sum(vaoLig5s)vaoLig5s,
+                sum(vaoBan10s)vaoBan10s,
+                sum(vaoDeo10s)vaoDeo10s,
+                sum(vaoBan20s)vaoBan20s,
+                sum(vaoDeo20s)vaoDeo20s,
+                sum(vaoTotal)vaoTotal
+        from
+        (select  ba.route_id,
+                count(distinct (case when ba.offered_brand = 47 then ba.id else null end)) regMax10s,
+                count(distinct (case when ba.offered_brand = 48 then ba.id else null end)) regMax20s,
+                count(distinct (case when ba.offered_brand = 49 then ba.id else null end)) bolMax10s,
+                count(distinct (case when ba.offered_brand = 50 then ba.id else null end)) bolMax20s,
+                count(distinct (case when ba.offered_brand IN (47,48,49,50) then ba.id else null end)) total_con,
+                sum(case when ba.offered_brand IN (47,48) then swapping_no else 0 end) regSwaMax,
+                sum(case when ba.offered_brand IN (49,50) then swapping_no else 0 end) bolSwaMax,
+                sum(case when ba.offered_brand IN (47,48,49,50) and swapping_no > 0 then 1 else 0 end) swappingCon,
+                sum(case when ba.offered_brand IN (47,48) then SAMPLING_NO else 0 end) regSamMax,
+                sum(case when ba.offered_brand IN (49,50) then SAMPLING_NO else 0 end) bolSamMax,
+                sum(case when ba.offered_brand IN (47,48,49,50) and SAMPLING_NO > 0 then 1 else 0 end) samplingCon,
+                sum(case when ba.offered_brand IN (47,48,49,50) and vs.product_quantity = 5 and vs.GIFT_ITEM_ID =17 then vs.quantity else 0 end) vaoLig5s,
+                sum(case when ba.offered_brand IN (47,48,49,50) and vs.GIFT_ITEM_ID=49 and vs.product_quantity = 10 then vs.quantity else 0 end) vaoBan10s,
+                sum(case when ba.offered_brand IN (47,48,49,50) and vs.GIFT_ITEM_ID=35 and vs.product_quantity = 10 then vs.quantity else 0 end) vaoDeo10s,
+                sum(case when ba.offered_brand IN (47,48,49,50) and vs.GIFT_ITEM_ID=49 and vs.product_quantity = 20 then vs.quantity else 0 end) vaoBan20s,
+                sum(case when ba.offered_brand IN (47,48,49,50) and vs.GIFT_ITEM_ID=35 and vs.product_quantity = 20 then vs.quantity else 0 end) vaoDeo20s,
+                sum(case when ba.offered_brand IN (47,48,49,50) and vs.GIFT_ITEM_ID IN (17,35,49) then vs.quantity else 0 end) vaoTotal
+        from    (select * from bractivity where TO_CHAR(TARGET_DATE, 'dd-mm-yyyy')=:targetDate) ba
+        LEFT    JOIN vao_sale vs on ba.id=vs.bractivity_id
+        group   by ba.route_id
+        ) bac
+        JOIN    v_teritory_all vt on bac.route_id=vt.route_id
+        and     vt.division_id like :divisionId || '%'
+        and     vt.teritory_id like :teritoryId || '%'
+        group   by vt.teritory_id
+        )bra
+        ON apa.TERITORY_ID = bra.TERITORY_ID
+ORDER  BY vta.WING_ID,vta.DIVISION_ID,vta.TERITORY_ID

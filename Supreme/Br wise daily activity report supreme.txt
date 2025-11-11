@@ -1,0 +1,83 @@
+select  
+        DISTINCT
+        vta.WING_ID wingId,
+        vta.WING_NAME wingName,
+        vta.DIVISION_ID divisionId,
+        vta.DIVISION_NAME divisionName,
+        vta.TERITORY_ID teritoryId,
+        vta.TERITORY_NAME teritoryName,
+        bru.user_name userName,
+        bru.br_name brName,
+        bru.status attenStatus,
+        NVL(bru.statusNo,0) * 30 contactTarget,
+        NVL(sfm10,0)sfm10,
+        NVL(sfm20,0)sfm20,
+        NVL(ssg10,0)ssg10,
+        NVL(ssg20,0)ssg20,
+        NVL(sst10,0)sst10,
+        NVL(sst20,0)sst20,
+        NVL(total_sup_con,0)totalSupCon,
+        ROUND(case when (NVL(bru.statusNo,0) * 30) > 0 then (NVL(total_sup_con,0) / (NVL(bru.statusNo,0) * 30) ) * 100 else 0 end,2) totalConAch,
+        
+        NVL(bru.statusNo,0) * 30 samplingTarget,
+        NVL(samplingSupConSfm,0)samplingSupConSfm,
+        NVL(samplingSupConSsg,0)samplingSupConSsg,
+        NVL(samplingSupConSst,0)samplingSupConSst,
+        NVL(samplingSupCon,0) samplingSupCon,
+        ROUND(case when (NVL(bru.statusNo,0) * 30) > 0 then (NVL(samplingSupCon,0) / (NVL(bru.statusNo,0) * 30) ) * 100 else 0 end,2) samplingAch,
+
+        NVL(bru.statusNo,0) * 5 vaoTarget,
+        NVL(vaoSfm,0)vaoSfm,
+        NVL(vaoSsg,0)vaoSsg,
+        NVL(vaoSst,0)vaoSst,
+        NVL(vaoSupTotal,0)vaoSupTotal,
+        ROUND(case when (NVL(bru.statusNo,0) * 5) > 0 then (NVL(vaoSupTotal,0) / (NVL(bru.statusNo,0) * 5) ) * 100 else 0 end,2) vaoAch
+from    (select * from v_teritory_all
+where   division_id like :divisionId || '%'
+and     teritory_id like :teritoryId || '%')vta
+JOIN    (
+        select  
+        bu.teritory_id,
+        br_user,
+        bu.user_name,
+        br.name br_name,
+        status,
+        case when status='PRESENT' then 1 else 0 end statusNo,
+        att_time
+from
+       ((SELECT ba.BR_USER_USER_ID br_user, 'PRESENT' status, TO_CHAR(ba.ATTENDANCE_DATE_TIME, 'dd-mm-yyyy') att_time
+        FROM BRUSER_ATTENDANCE ba  
+        WHERE TO_CHAR(ba.ATTENDANCE_DATE_TIME, 'dd-mm-yyyy')=:targetDate)
+        UNION all
+        (SELECT bul.BR_USER_USER_ID br_user,'ABSENT' status, TO_CHAR(bul.LEAVE_DATE_TIME, 'dd-mm-yyyy') att_time
+        FROM BR_USER_LEAVE bul 
+        WHERE TO_CHAR(bul.LEAVE_DATE_TIME, 'dd-mm-yyyy')=:targetDate)) br_user
+        JOIN BRUSER_ROLES br ON br_user.br_user = br.BRUSER_USER_ID
+        and  ROLES_ID=14
+        JOIN BRUSER bu ON br_user.br_user = bu.USER_ID 
+        AND bu.IS_ACCOUNT_NON_EXPIRED = 1
+        JOIN brand_representative br on bu.user_id=br.br_user_user_id
+        ) bru
+        ON vta.teritory_id=bru.teritory_id
+LEFT    JOIN (select  ba.br_user_id,
+                count(distinct (case when ba.offered_brand = 34 then ba.id else null end)) sfm10,
+                count(distinct (case when ba.offered_brand = 35 then ba.id else null end)) sfm20,
+                count(distinct (case when ba.offered_brand = 37 then ba.id else null end)) ssg10,
+                count(distinct (case when ba.offered_brand = 38 then ba.id else null end)) ssg20,
+                count(distinct (case when ba.offered_brand = 39 then ba.id else null end)) sst10,
+                count(distinct (case when ba.offered_brand = 40 then ba.id else null end)) sst20,
+                count(distinct (case when ba.offered_brand IN (34,35,37,38,39,40) then ba.id else null end)) total_sup_con,
+                sum(case when ba.offered_brand IN (34,35) and sampling_no =1 then 1 else 0 end) samplingSupConSfm,
+                sum(case when ba.offered_brand IN (37,38) and sampling_no =1 then 1 else 0 end) samplingSupConSsg,
+                sum(case when ba.offered_brand IN (39,40) and sampling_no =1 then 1 else 0 end) samplingSupConSst,
+                sum(case when ba.offered_brand IN (34,35,37,38,39,40) and sampling_no =1 then 1 else 0 end) samplingSupCon,
+                sum(case when vs.product_id in (34,35) and vs.product_quantity =10 then vs.quantity else 0 end) vaoSfm,
+                sum(case when vs.product_id in (37,38) and vs.product_quantity =10 then vs.quantity else 0 end) vaoSsg,
+                sum(case when vs.product_id in (39,40) and vs.product_quantity =10 then vs.quantity else 0 end) vaoSst,
+                sum(case when vs.product_id in (34,35,37,38,39,40) and vs.product_quantity =10 then vs.quantity else 0 end) vaoSupTotal
+        from    (select * from bractivity where TO_CHAR(TARGET_DATE, 'dd-mm-yyyy')=:targetDate) ba
+        LEFT    JOIN vao_sale vs on ba.id=vs.bractivity_id
+        group   by ba.br_user_id
+        ) bac
+        ON bru.br_user=bac.br_user_id
+ORDER   by vta.WING_ID, vta.DIVISION_ID, vta.TERITORY_ID, bru.user_name

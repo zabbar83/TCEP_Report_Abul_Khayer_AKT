@@ -1,0 +1,91 @@
+select  DISTINCT
+        vta.WING_ID wingId,
+        vta.WING_NAME wingName,
+        vta.DIVISION_ID divisionId,
+        vta.DIVISION_NAME divisionName,
+        vta.TERITORY_ID teritoryId,
+        vta.TERITORY_NAME teritoryName,
+        pa.allocation allocation,
+        NVL(bat.user_attendance,0) userAttendance,
+        NVL(bat.user_attendance,0) * 30 contactTarget,
+        NVL(sfm10,0)sfm10,
+        NVL(sfm20,0)sfm20,
+        NVL(ssg10,0)ssg10,
+        NVL(ssg20,0)ssg20,
+        NVL(sst10,0)sst10,
+        NVL(sst20,0)sst20,
+        NVL(total_sup_con,0)totalSupCon,
+        ROUND(case when (NVL(bat.user_attendance,0) * 30) > 0 then (NVL(total_sup_con,0) / (NVL(bat.user_attendance,0) * 30) ) * 100 else 0 end,2) totalConAch,
+        
+        NVL(bat.user_attendance,0) * 30 samplingTarget,
+        NVL(samplingSupConSfm,0)samplingSupConSfm,
+        NVL(samplingSupConSsg,0)samplingSupConSsg,
+        NVL(samplingSupConSst,0)samplingSupConSst,
+        NVL(samplingSupCon,0) samplingSupCon,
+        ROUND(case when (NVL(bat.user_attendance,0) * 30) > 0 then (NVL(samplingSupCon,0) / (NVL(bat.user_attendance,0) * 30) ) * 100 else 0 end,2) samplingAch,
+
+        NVL(bat.user_attendance,0) * 5 vaoTarget,
+        NVL(vaoSfm,0)vaoSfm,
+        NVL(vaoSsg,0)vaoSsg,
+        NVL(vaoSst,0)vaoSst,
+        NVL(vaoSupTotal,0)vaoSupTotal,
+        ROUND(case when (NVL(bat.user_attendance,0) * 5) > 0 then (NVL(vaoSupTotal,0) / (NVL(bat.user_attendance,0) * 5) ) * 100 else 0 end,2) vaoAch
+FROM    ASSIGN_POSITION_ALLOCATION apa
+JOIN    POSITION_ALLOCATION_POLICY pap ON apa.POSITION_ALLOCATION_POLICY_ID = pap.ID
+and     TO_CHAR(apa.TARGET_DATE, 'dd-mm-yyyy')=:targetDate
+JOIN    POSITION_ALLOCATION pa ON (pa.POSITION_ALLOCATION_POLICY_ID = pap.ID and pa.role_id=14)
+JOIN    V_TERITORY_ALL vta ON apa.TERITORY_ID = vta.TERITORY_ID
+and     vta.division_id like :divisionId || '%'
+and     vta.teritory_id like :teritoryId || '%'
+LEFT    JOIN (SELECT  bu.TERITORY_ID,count(bua.BR_USER_USER_ID) user_attendance
+            FROM    bruser bu
+            JOIN    bruser_attendance bua ON bua.BR_USER_USER_ID = bu.USER_ID
+            AND     TO_CHAR(bua.ATTENDANCE_DATE_TIME, 'dd-mm-yyyy')=:targetDate
+            JOIN    bruser_roles bur ON (bur.BRUSER_USER_ID = bu.USER_ID and bur.ROLES_ID = 14)
+            WHERE   bu.IS_ACCOUNT_NON_EXPIRED = 1
+            GROUP   BY bu.TERITORY_ID)bat
+            ON apa.TERITORY_ID = bat.TERITORY_ID
+LEFT    JOIN (select  vt.teritory_id,
+                SUM(sfm10)sfm10,
+                SUM(sfm20)sfm20,
+                SUM(ssg10)ssg10,
+                SUM(ssg20)ssg20,
+                SUM(sst10)sst10,
+                SUM(sst20)sst20,
+                SUM(total_sup_con)total_sup_con,
+                SUM(samplingSupConSfm)samplingSupConSfm,
+                SUM(samplingSupConSsg)samplingSupConSsg,
+                SUM(samplingSupConSst)samplingSupConSst,
+                SUM(samplingSupCon) samplingSupCon,
+                SUM(vaoSfm)vaoSfm,
+                SUM(vaoSsg)vaoSsg,
+                SUM(vaoSst)vaoSst,
+                SUM(vaoSupTotal)vaoSupTotal
+        from
+        (select  ba.route_id,
+                count(distinct (case when ba.offered_brand = 34 then ba.id else null end)) sfm10,
+                count(distinct (case when ba.offered_brand = 35 then ba.id else null end)) sfm20,
+                count(distinct (case when ba.offered_brand = 37 then ba.id else null end)) ssg10,
+                count(distinct (case when ba.offered_brand = 38 then ba.id else null end)) ssg20,
+                count(distinct (case when ba.offered_brand = 39 then ba.id else null end)) sst10,
+                count(distinct (case when ba.offered_brand = 40 then ba.id else null end)) sst20,
+                count(distinct (case when ba.offered_brand IN (34,35,37,38,39,40) then ba.id else null end)) total_sup_con,
+                sum(case when ba.offered_brand IN (34,35) and sampling_no =1 then 1 else 0 end) samplingSupConSfm,
+                sum(case when ba.offered_brand IN (37,38) and sampling_no =1 then 1 else 0 end) samplingSupConSsg,
+                sum(case when ba.offered_brand IN (39,40) and sampling_no =1 then 1 else 0 end) samplingSupConSst,
+                sum(case when ba.offered_brand IN (34,35,37,38,39,40) and sampling_no =1 then 1 else 0 end) samplingSupCon,
+                sum(case when vs.product_id in (34,35) and vs.product_quantity =10 then vs.quantity else 0 end) vaoSfm,
+                sum(case when vs.product_id in (37,38) and vs.product_quantity =10 then vs.quantity else 0 end) vaoSsg,
+                sum(case when vs.product_id in (39,40) and vs.product_quantity =10 then vs.quantity else 0 end) vaoSst,
+                sum(case when vs.product_id in (34,35,37,38,39,40) and vs.product_quantity =10 then vs.quantity else 0 end) vaoSupTotal
+        from    (select * from bractivity where TO_CHAR(TARGET_DATE, 'dd-mm-yyyy')=:targetDate) ba
+        LEFT    JOIN vao_sale vs on ba.id=vs.bractivity_id
+        group   by ba.route_id
+        ) bac
+        JOIN    v_teritory_all vt on bac.route_id=vt.route_id
+        and     vt.division_id like :divisionId || '%'
+        and     vt.teritory_id like :teritoryId || '%'
+        group   by vt.teritory_id
+        )bra
+        ON apa.TERITORY_ID = bra.TERITORY_ID
+ORDER  BY vta.WING_ID,vta.DIVISION_ID,vta.TERITORY_ID
