@@ -45,8 +45,9 @@ SELECT             t.teritory_name AS territoryName,
                    p.product_name AS offeredBrand,
                    p.product_id AS offeredBrandProductId,
                    ba.contact_module AS contactModule,
-                case when ba.offered_brand IN (4,5) and vs.product_quantity = 10 and vs.GIFT_ITEM_ID = 50 then vs.quantity else 0 end vaoLig5s,
-                case when ba.offered_brand IN (4,5) and vs.GIFT_ITEM_ID IN (50) and vs.product_quantity IN (10) then 'Yes' else 'No' end vaoStatus
+                case when ba.offered_brand IN (4,5) and vs.product_quantity = 10 and vs.GIFT_ITEM_ID = 15 then vs.quantity else 0 end vao10sBraMatch,
+                case when ba.offered_brand IN (4,5) and vs.product_quantity = 20 and vs.GIFT_ITEM_ID = 50 then vs.quantity else 0 end vao20sPerfume,
+                case when ba.offered_brand IN (4,5) and vs.GIFT_ITEM_ID IN (15,50) and vs.product_quantity IN (10,20) then 'Yes' else 'No' end vaoStatus
             FROM bractivity ba
             JOIN teritory r ON r.id = ba.route_id
             JOIN teritory z ON z.id = r.parent_id
