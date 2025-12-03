@@ -1,0 +1,39 @@
+Select
+            sa.add_date AS addDate,
+            vta.wing_id wingId,
+            vta.wing_name wingName,
+            vta.division_id divisionId,
+            vta.division_name divisionName,
+            vta.teritory_id teritoryId,
+            vta.teritory_name teritoryName,
+            bu.user_name userId,
+            br.name brName,
+            br.contact_number brMobile,
+            p.product_desc brandName,
+            vta.route_id routeId,
+            vta.route_name routeName,
+            ab.address_line1 clusterName,
+            c.trade_license_name outletName,
+            c.customer_name retailerName,
+            NVL(c.mobile_no,'N/A') retailerMobile,
+            case when sa.is_available=1 then 'Stock Available' else 'Stock Not Available' end stockStatus,
+            sum(pwos.stock) stockPlacement
+    from    appce.v_teritory_all vta
+    JOIN    appce.consumer_teritory ct ON vta.route_id=ct.teritory_id
+    AND     vta.division_id like :divisionId || '%'
+    AND     vta.teritory_id like :territoryId || '%'
+    JOIN    appce.consumer c ON ct.consumer_id=c.id
+    AND     c.status=1
+    JOIN    appce.stock_availability sa ON ct.consumer_id=sa.outlet_id
+  AND     sa.add_date between :fromDate and :toDate
+    JOIN    appce.bruser bu ON sa.bruser_id=bu.user_id
+    JOIN    appce.brand_representative br ON bu.user_id=br.br_user_user_id
+    LEFT    JOIN appce.PROD_WISE_OUTLET_STOCK pwos ON sa.outlet_id=pwos.outlet_id and sa.bruser_id=pwos.bruser_id  
+    AND     pwos.add_date between :fromDate and :toDate
+    JOIN    appce.product p ON sa.product_id=p.product_id
+    JOIN    appce.consumer_address ca on c.id=ca.consumer_id
+    JOIN    appce.address_book ab on ca.address_id=ab.id
+    Group   by sa.add_date,vta.wing_id,vta.wing_name,vta.division_id,vta.division_name,vta.teritory_id,vta.teritory_name,
+            bu.user_name,br.name,br.contact_number,p.product_desc,vta.route_id,vta.route_name,c.trade_license_name,
+            c.customer_name,c.mobile_no,sa.is_available, ab.address_line1
+    order   by sa.add_date,vta.wing_id,vta.division_id,vta.teritory_id,vta.route_id,bu.user_name
