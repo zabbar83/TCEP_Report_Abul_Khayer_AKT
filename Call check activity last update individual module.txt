@@ -1,81 +1,81 @@
-select  
-        cca.added_date activityDate,
-        cca.SUPERVISOR_USER_ID supervisorId,
-        brs.name supervisorName,
-        brs.contact_number supConNum,
-        v.teritory_id teritoryId,
-        v.teritory_name teritoryName,
-        ba.br_user_id brId,
-        br.name brName,
-        br.contact_number brConNum,
-        bc.customer_name consumerName,
-        bco.contact_number consumerConNum,
-        nvl(qa.q1,' ')q1,nvl(qa.q2,' ')q2,nvl(qa.q3,' ')q3,nvl(qa.q4,' ')q4,nvl(qa.q5,' ')q5,nvl(qa.q6,' ')q6,
-        nvl(qa.q7,' ')q7,
-        nvl(qa.q8,' ')q8,
-        nvl(qa.q9,' ')q9,
-        case when contact_module in ('SUPREME_SIGNATURE_FM',
-                                            'BD_SPECIAL',
-                                            'BD_DOUBLE_FILTER',
-                                            'MAXIM_TEASER',
-                                            'MAXIM_LAUNCHING',
-                                            'SUPREME_STYLE_FM',
-                                            'MARISE_SPECIAL_BLEND',
-                                            'BD_ADVANCED'
-                                            ) then (case when q2='Yes' and q4='Yes' and q5='Yes' and q6='Yes' and q9 !='No' then 'TRUE' else 'FALSE' end)
-                                              else  (case when q2='Yes' and q4='Yes' and q5='Yes' and q6='Yes' and q7='Yes' and q8='Yes' and q9 !='No' then 'TRUE' else 'FALSE' end)
-        end contactSatus
-from    appce.call_check_activity cca
-join    appce.bractivity ba on cca.br_activity_id=ba.id
-and     cca.added_date between to_date(:targetdate,'DD-MON-YY') and to_date(:targetdate,'DD-MON-YY')
-join    appce.v_teritory_all v on ba.route_id=v.route_id
-join    appce.bractivity_consumer bc on ba.br_activity_consumer_id=bc.id
-join    appce.bractivity_contact bco on bc.br_activity_contact_id=bco.id
-left    join appce.brand_representative brs on cca.SUPERVISOR_USER_ID=brs.br_user_user_id
-left    join appce.brand_representative br on ba.br_user_id=br.br_user_user_id
-join    (select  
-                    added_date,
-                    br_activity_id,
-                    q1,q2,q3,q4,q5,q6,
-                    case when contact_module in ('SUPREME_SIGNATURE_FM',
-                                            'BD_SPECIAL',
-                                            'BD_DOUBLE_FILTER',
-                                            'MAXIM_TEASER',
-                                            'MAXIM_LAUNCHING',
-                                            'SUPREME_STYLE_FM',
-                                            'MARISE_SPECIAL_BLEND',
-                                            'BD_ADVANCED'
-                                            ) then ' ' else q7 end q7,
-                    case when contact_module in ('SUPREME_SIGNATURE_FM',
-                                            'BD_SPECIAL',
-                                            'BD_DOUBLE_FILTER',
-                                            'MAXIM_TEASER',
-                                            'MAXIM_LAUNCHING',
-                                            'SUPREME_STYLE_FM',
-                                            'MARISE_SPECIAL_BLEND',
-                                            'BD_ADVANCED'
-                                            ) then ' ' else q8 end q8,
-                    q9
-            from
-            (select  
-                    cca.added_date,
-                    cca.br_activity_id,
-                    b.contact_module,
-                    Max(case when can.question_id=1 then qo.option_name end) q1,
-                    Max(case when can.question_id=2 then qo.option_name end) q2,
-                    Max(case when can.question_id=3 then qo.option_name end) q3,
-                    Max(case when can.question_id=4 then qo.option_name end) q4,
-                    Max(case when can.question_id=5 then qo.option_name end) q5,
-                    Max(case when can.question_id=6 then qo.option_name end) q6,
-                    Max(case when can.question_id=7 then qo.option_name end) q7,
-                    Max(case when can.question_id=8 then qo.option_name end) q8,
-                    Max(case when can.question_id=9 then qo.option_name end) q9
-            from    appce.call_check_activity cca
-            join    appce.call_check_ans can on cca.id=can.call_check_activity_id
-            join    appce.question_options qo on can.QUESTION_OPTIONS_ID=qo.id
-            join    appce.bractivity b on cca.br_activity_id=b.id
-            where   cca.added_date between to_date(:targetdate,'DD-MON-YY') and to_date(:targetdate,'DD-MON-YY')
-            group   by cca.added_date,cca.br_activity_id,b.contact_module
-            )
-        ) qa on cca.br_activity_id=qa.br_activity_id
-order   by cca.added_date,cca.SUPERVISOR_USER_ID,ba.br_user_id
+select
+                        cca.added_date activityDate,
+                        cca.SUPERVISOR_USER_ID supervisorId,
+                        brs.name supervisorName,
+                        brs.contact_number supConNum,
+                        v.teritory_id teritoryId,
+                        v.teritory_name teritoryName,
+                        ba.br_user_id brId,
+                        br.name brName,
+                        br.contact_number brConNum,
+                        bc.customer_name consumerName,
+                        bco.contact_number consumerConNum,
+                        nvl(qa.q1,' ')q1,nvl(qa.q2,' ')q2,nvl(qa.q3,' ')q3,nvl(qa.q4,' ')q4,nvl(qa.q5,' ')q5,nvl(qa.q6,' ')q6,
+                        nvl(qa.q7,' ')q7,
+                        nvl(qa.q8,' ')q8,
+                        nvl(qa.q9,' ')q9,
+                        case when contact_module in ('SUPREME_SIGNATURE_FM',
+                                                     'BD_SPECIAL',
+                                                     'BD_DOUBLE_FILTER',
+                                                     'MAXIM_TEASER',
+                                                     'MAXIM_LAUNCHING',
+                                                     'SUPREME_STYLE_FM',
+                                                     'MARISE_SPECIAL_BLEND',
+                                                     'BD_ADVANCED'
+                            ) then (case when q2='Yes' and q4='Yes' and q5='Yes' and q6='Yes' and q9 !='No' then 'TRUE' else 'FALSE' end)
+                             else  (case when q2='Yes' and q4='Yes' and q5='Yes' and q6='Yes' and q7 !='No' and q8 !='No' and q9 !='No' then 'TRUE' else 'FALSE' end)
+                            end contactSatus
+                    from    appce.call_check_activity cca
+                                join    appce.bractivity ba on cca.br_activity_id=ba.id
+                        and     cca.added_date between to_date(:fromDate,'DD-MON-YY') and to_date(:toDate,'DD-MON-YY')
+                                join    appce.v_teritory_all v on ba.route_id=v.route_id
+                                join    appce.bractivity_consumer bc on ba.br_activity_consumer_id=bc.id
+                                join    appce.bractivity_contact bco on bc.br_activity_contact_id=bco.id
+                                left    join appce.brand_representative brs on cca.SUPERVISOR_USER_ID=brs.br_user_user_id
+                                left    join appce.brand_representative br on ba.br_user_id=br.br_user_user_id
+                                join    (select
+                                             added_date,
+                                             br_activity_id,
+                                             q1,q2,q3,q4,q5,q6,
+                                             case when contact_module in ('SUPREME_SIGNATURE_FM',
+                                                                          'BD_SPECIAL',
+                                                                          'BD_DOUBLE_FILTER',
+                                                                          'MAXIM_TEASER',
+                                                                          'MAXIM_LAUNCHING',
+                                                                          'SUPREME_STYLE_FM',
+                                                                          'MARISE_SPECIAL_BLEND',
+                                                                          'BD_ADVANCED'
+                                                 ) then 'Not Applicable' else q7 end q7,
+                                             case when contact_module in ('SUPREME_SIGNATURE_FM',
+                                                                          'BD_SPECIAL',
+                                                                          'BD_DOUBLE_FILTER',
+                                                                          'MAXIM_TEASER',
+                                                                          'MAXIM_LAUNCHING',
+                                                                          'SUPREME_STYLE_FM',
+                                                                          'MARISE_SPECIAL_BLEND',
+                                                                          'BD_ADVANCED'
+                                                 ) then 'Not Applicable' else q8 end q8,
+                                             q9
+                                         from
+                                             (select
+                                                  cca.added_date,
+                                                  cca.br_activity_id,
+                                                  b.contact_module,
+                                                  Max(case when can.question_id=1 then qo.option_name end) q1,
+                                                  Max(case when can.question_id=2 then qo.option_name end) q2,
+                                                  Max(case when can.question_id=3 then qo.option_name end) q3,
+                                                  Max(case when can.question_id=4 then qo.option_name end) q4,
+                                                  Max(case when can.question_id=5 then qo.option_name end) q5,
+                                                  Max(case when can.question_id=6 then qo.option_name end) q6,
+                                                  Max(case when can.question_id=7 then qo.option_name end) q7,
+                                                  Max(case when can.question_id=8 then qo.option_name end) q8,
+                                                  Max(case when can.question_id=9 then qo.option_name end) q9
+                                              from    appce.call_check_activity cca
+                                                          join    appce.call_check_ans can on cca.id=can.call_check_activity_id
+                                                          join    appce.question_options qo on can.QUESTION_OPTIONS_ID=qo.id
+                                                          join    appce.bractivity b on cca.br_activity_id=b.id
+                                              where   cca.added_date between to_date(:fromDate,'DD-MON-YY') and to_date(:toDate,'DD-MON-YY')
+                                              group   by cca.added_date,cca.br_activity_id,b.contact_module
+                                             )
+                    ) qa on cca.br_activity_id=qa.br_activity_id
+                    order   by cca.added_date,cca.SUPERVISOR_USER_ID,ba.br_user_id

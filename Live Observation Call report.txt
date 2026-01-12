@@ -1,49 +1,49 @@
 select  
-        ojt.added_date activityDate,
-        ojt.WITH_TMS_USER_ID supervisorId,
-        brs.name supervisorName,
-        brs.contact_number supConNum,
-        v.teritory_id teritoryId,
-        v.teritory_name teritoryName,
-        ba.br_user_id brId,
-        br.name brName,
-        br.contact_number brConNum,
-        bc.customer_name consumerName,
-        bco.contact_number consumerConNum,
-        qa.q12,qa.q13,qa.q14,qa.q15,qa.q16,qa.q17,qa.q18,qa.q19,qa.q20,
-        qa.contactSatus
-from    on_the_job_training ojt
-join    bractivity ba on ojt.br_activity_id=ba.id
-and     ojt.added_date between to_date(:fromDate,'DD-MON-YY') and to_date(:toDate,'DD-MON-YY')
-join    v_teritory_all v on ba.route_id=v.route_id
-join    bractivity_consumer bc on ba.br_activity_consumer_id=bc.id
-join    bractivity_contact bco on bc.br_activity_contact_id=bco.id
-left    join brand_representative brs on ojt.WITH_TMS_USER_ID=brs.br_user_user_id
-left    join brand_representative br on ba.br_user_id=br.br_user_user_id
-join    (select  
-                        added_date,
-                        br_activity_id,
-                        q12,q13,q14,q15,q16,q17,q18,q19,q20,
-                        case    when q15='Yes' and q16='Yes' and q17='Yes' and q18='Yes' and q19='Yes' and q20 !='No' 
-                                then 'TRUE' 
-                                else 'FALSE' 
-                        end contactSatus
-                from
-                (select  
-                        lqa.added_date,
-                        lqa.br_activity_id,
-                        Max(case when lqa.question_id=12 then qo.option_name end) q12,
-                        Max(case when lqa.question_id=13 then qo.option_name end) q13,
-                        Max(case when lqa.question_id=14 then qo.option_name end) q14,
-                        Max(case when lqa.question_id=15 then qo.option_name end) q15,
-                        Max(case when lqa.question_id=16 then qo.option_name end) q16,
-                        Max(case when lqa.question_id=17 then qo.option_name end) q17,
-                        Max(case when lqa.question_id=18 then qo.option_name end) q18,
-                        Max(case when lqa.question_id=19 then qo.option_name end) q19,
-                        Max(case when lqa.question_id=20 then qo.option_name end) q20
-                from    live_ob_ques_ans lqa
-                join    question_options qo on lqa.question_options_id=qo.id
-                group   by lqa.added_date,lqa.br_activity_id
-                )
-            ) qa on ojt.br_activity_id=qa.br_activity_id
-order   by ojt.added_date,ojt.WITH_TMS_USER_ID,ba.br_user_id
+                            ojt.added_date activityDate,
+                            ojt.WITH_TMS_USER_ID supervisorId,
+                            brs.name supervisorName,
+                            brs.contact_number supConNum,
+                            v.teritory_id teritoryId,
+                            v.teritory_name teritoryName,
+                            ba.br_user_id brId,
+                            br.name brName,
+                            br.contact_number brConNum,
+                            bc.customer_name consumerName,
+                            bco.contact_number consumerConNum,
+                            qa.q12,qa.q13,qa.q14,qa.q15,qa.q16,qa.q17,qa.q18,qa.q19,qa.q20,
+                            qa.contactSatus
+                    from    on_the_job_training ojt
+                    join    bractivity ba on ojt.br_activity_id=ba.id
+                    and     ojt.added_date between to_date(:fromDate,'DD-MON-YY') and to_date(:toDate,'DD-MON-YY')
+                    join    v_teritory_all v on ba.route_id=v.route_id
+                    join    bractivity_consumer bc on ba.br_activity_consumer_id=bc.id
+                    join    bractivity_contact bco on bc.br_activity_contact_id=bco.id
+                    left    join brand_representative brs on ojt.WITH_TMS_USER_ID=brs.br_user_user_id
+                    left    join brand_representative br on ba.br_user_id=br.br_user_user_id
+                    join    (select  
+                                            added_date,
+                                            br_activity_id,
+                                            q12,q13,q14,q15,q16,q17,q18,q19,q20,
+                                            case    when q15='Yes' and q16='Yes' and q17='Yes' and q18 !='No' and q19 !='No' and q20 !='No' 
+                                                    then 'TRUE' 
+                                                    else 'FALSE' 
+                                            end contactSatus
+                                    from
+                                    (select  
+                                            lqa.added_date,
+                                            lqa.br_activity_id,
+                                            Max(case when lqa.question_id=12 then qo.option_name end) q12,
+                                            Max(case when lqa.question_id=13 then qo.option_name end) q13,
+                                            Max(case when lqa.question_id=14 then qo.option_name end) q14,
+                                            Max(case when lqa.question_id=15 then qo.option_name end) q15,
+                                            Max(case when lqa.question_id=16 then qo.option_name end) q16,
+                                            Max(case when lqa.question_id=17 then qo.option_name end) q17,
+                                            Max(case when lqa.question_id=18 then qo.option_name end) q18,
+                                            Max(case when lqa.question_id=19 then qo.option_name end) q19,
+                                            Max(case when lqa.question_id=20 then qo.option_name end) q20
+                                    from    live_ob_ques_ans lqa
+                                    join    question_options qo on lqa.question_options_id=qo.id
+                                    group   by lqa.added_date,lqa.br_activity_id
+                                    )
+                                ) qa on ojt.br_activity_id=qa.br_activity_id
+                    order   by ojt.added_date,ojt.WITH_TMS_USER_ID,ba.br_user_id
