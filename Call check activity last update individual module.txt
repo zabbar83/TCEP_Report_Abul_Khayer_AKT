@@ -14,7 +14,8 @@ select
                         nvl(qa.q7,' ')q7,
                         nvl(qa.q8,' ')q8,
                         nvl(qa.q9,' ')q9,
-                        case when contact_module in ('SUPREME_SIGNATURE_FM',
+                        CASE WHEN qa.q1 !='Call Received and Conversation Done' then 'Unsuccessful Call' else
+                        (case when contact_module in ('SUPREME_SIGNATURE_FM',
                                                      'BD_SPECIAL',
                                                      'BD_DOUBLE_FILTER',
                                                      'MAXIM_TEASER',
@@ -24,6 +25,7 @@ select
                                                      'BD_ADVANCED'
                             ) then (case when q2='Yes' and q4='Yes' and q5='Yes' and q6='Yes' and q9 !='No' then 'TRUE' else 'FALSE' end)
                              else  (case when q2='Yes' and q4='Yes' and q5='Yes' and q6='Yes' and q7 !='No' and q8 !='No' and q9 !='No' then 'TRUE' else 'FALSE' end)
+                            end) 
                             end contactSatus
                     from    appce.call_check_activity cca
                                 join    appce.bractivity ba on cca.br_activity_id=ba.id
