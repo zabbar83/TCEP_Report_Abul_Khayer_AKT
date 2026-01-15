@@ -1,0 +1,28 @@
+INSERT INTO DAILY_ACTIVITY_SUMMARY
+(
+    YEAR,
+    MONTH,
+    DAY,
+    BRAND_VARIANT,
+    ADD_DATE_TIME,
+    ACTIVITY_COUNT
+)
+SELECT
+    EXTRACT(YEAR FROM b.TARGET_DATE)                         AS YEAR,
+    TO_CHAR(b.TARGET_DATE, 'YYYYMM')                         AS MONTH,
+    TO_CHAR(b.TARGET_DATE, 'YYYYMMDD')                       AS DAY,
+    bv.ID                                                    AS BRAND_VARIANT,
+    sysdate                                     AS ADD_DATE_TIME,
+    COUNT(*)                                                 AS ACTIVITY_COUNT
+FROM BRACTIVITY b
+JOIN PRODUCT p
+    ON b.OFFERED_BRAND = p.PRODUCT_ID
+JOIN BRAND_VARIANT bv
+    ON p.BRAND_VARIANT_ID = bv.ID
+WHERE b.TARGET_DATE = to_date(sysdate-1)
+GROUP BY
+    EXTRACT(YEAR FROM b.TARGET_DATE),
+    TO_CHAR(b.TARGET_DATE, 'YYYYMM'),
+    TO_CHAR(b.TARGET_DATE, 'YYYYMMDD'),
+    bv.ID,
+    sysdate
