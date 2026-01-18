@@ -1,0 +1,58 @@
+select  DISTINCT
+        vta.WING_ID wingId,
+        vta.WING_NAME wingName,
+        vta.DIVISION_ID divisionId,
+        vta.DIVISION_NAME divisionName,
+        vta.TERITORY_ID teritoryId,
+        vta.TERITORY_NAME teritoryName,
+        pa.allocation allocation,
+        NVL(bat.user_attendance,0) userAttendance,
+        NVL(bat.user_attendance,0) * 25 contactTarget,
+        NVL(essePrime10s,0) essePrime10s,
+        NVL(esseChaMango20s,0) esseChaMango20s,
+        NVL(total_con,0) totalCon,
+        ROUND(case when (NVL(bat.user_attendance,0) * 25) > 0 then (NVL(total_con,0) / (NVL(bat.user_attendance,0) * 25) ) * 100 else 0 end,2) totalConAch,
+        
+        NVL(bat.user_attendance,0) * 25 samplingTarget,
+        NVL(esseSamp,0) esseSamp,
+        NVL(samplingCon,0) samplingCon,
+        ROUND(case when (NVL(bat.user_attendance,0) * 25) > 0 then (NVL(samplingCon,0) / (NVL(bat.user_attendance,0) * 25) ) * 100 else 0 end,2) samplingAch        
+FROM    ASSIGN_POSITION_ALLOCATION apa 
+JOIN    POSITION_ALLOCATION_POLICY pap ON apa.POSITION_ALLOCATION_POLICY_ID = pap.ID  
+and     TO_CHAR(apa.TARGET_DATE, 'dd-mm-yyyy')=:targetDate
+JOIN    POSITION_ALLOCATION pa ON (pa.POSITION_ALLOCATION_POLICY_ID = pap.ID and pa.role_id=14)
+JOIN    V_TERITORY_ALL vta ON apa.TERITORY_ID = vta.TERITORY_ID
+and     vta.division_id like :divisionId || '%'
+and     vta.teritory_id like :teritoryId || '%'
+LEFT    JOIN (SELECT  bu.TERITORY_ID,count(bua.BR_USER_USER_ID) user_attendance
+            FROM    bruser bu 
+            JOIN    bruser_attendance bua ON bua.BR_USER_USER_ID = bu.USER_ID 
+            AND     TO_CHAR(bua.ATTENDANCE_DATE_TIME, 'dd-mm-yyyy')=:targetDate
+            JOIN    bruser_roles bur ON (bur.BRUSER_USER_ID = bu.USER_ID and bur.ROLES_ID = 14)
+            WHERE   bu.IS_ACCOUNT_NON_EXPIRED = 1
+            GROUP   BY bu.TERITORY_ID)bat
+            ON apa.TERITORY_ID = bat.TERITORY_ID
+LEFT    JOIN (select  vt.teritory_id,
+                sum(essePrime10s)essePrime10s,
+                sum(esseChaMango20s)esseChaMango20s,
+                sum(total_con)total_con,
+                sum(esseSamp)esseSamp,
+                sum(samplingCon)samplingCon
+        from
+        (select  ba.route_id,
+                count(distinct (case when ba.offered_brand = 53 then ba.id else null end)) essePrime10s,
+                count(distinct (case when ba.offered_brand = 54 then ba.id else null end)) esseChaMango20s,
+                count(distinct (case when ba.offered_brand IN (53,54) then ba.id else null end)) total_con,
+                sum(case when ba.offered_brand IN (53,54) then SAMPLING_NO else 0 end) esseSamp,
+                sum(case when ba.offered_brand IN (53,54) and SAMPLING_NO > 0 then 1 else 0 end) samplingCon
+        from    (select * from bractivity where TO_CHAR(TARGET_DATE, 'dd-mm-yyyy')=:targetDate) ba
+        LEFT    JOIN vao_sale vs on ba.id=vs.bractivity_id
+        group   by ba.route_id
+        ) bac
+        JOIN    v_teritory_all vt on bac.route_id=vt.route_id
+        and     vt.division_id like :divisionId || '%'
+        and     vt.teritory_id like :teritoryId || '%'
+        group   by vt.teritory_id
+        )bra
+        ON apa.TERITORY_ID = bra.TERITORY_ID
+ORDER  BY vta.WING_ID,vta.DIVISION_ID,vta.TERITORY_ID
