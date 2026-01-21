@@ -1,0 +1,26 @@
+select  Distinct
+        b.USER_ID                           AS user_ID,
+        br.CONTACT_NUMBER                   AS contactNumber,
+        br.NAME                             AS brName,
+        NVL(bac.ACTIVITY_COUNT, 0) AS totalActivity,
+        NVL(vsAgg.totalVao, 0) AS totalVao,
+        NVL(asb.VAO_SALES_TARGET, 0) AS vaoTarget,
+        NVL(asb.CONTACT_TARGET, 0) AS activityTarget
+FROM    BRUSER b
+JOIN    BRAND_REPRESENTATIVE br on b.user_id=br.br_user_user_id
+JOIN    SUPERVISOR_TMR sr on b.user_id=sr.tmr_id
+AND     (sysdate-1) between sr.ed and sr.td
+AND     sr.SUPERVISOR_ID = :supervisorId
+LEFT    JOIN ASSIGN_BRAND asb ON asb.TARGET_DATE = to_date(SYSDATE - 1)
+LEFT    JOIN BRUSER_ACTIVITY_COUNT bac ON b.USER_ID = bac.BR_USER_ID
+AND     bac.TARGET_DATE = to_date(SYSDATE - 1)
+LEFT    JOIN (
+                SELECT
+                        brAct.BR_USER_ID,
+                        SUM(vs.QUANTITY) AS totalVao
+                FROM    BRACTIVITY brAct
+                JOIN    VAO_SALE vs ON brAct.ID = vs.BRACTIVITY_ID
+                WHERE brAct.TARGET_DATE = TRUNC(SYSDATE - 1 )
+                GROUP BY brAct.BR_USER_ID
+            ) vsAgg
+            ON b.USER_ID = vsAgg.BR_USER_IDs
