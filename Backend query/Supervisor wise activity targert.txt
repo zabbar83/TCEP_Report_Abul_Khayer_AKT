@@ -2,10 +2,10 @@ select  Distinct
         b.USER_ID                           AS user_ID,
         br.CONTACT_NUMBER                   AS contactNumber,
         br.NAME                             AS brName,
-        NVL(bac.ACTIVITY_COUNT, 0) AS totalActivity,
-        NVL(vsAgg.totalVao, 0) AS totalVao,
-        NVL(asb.VAO_SALES_TARGET, 0) AS vaoTarget,
-        NVL(asb.CONTACT_TARGET, 0) AS activityTarget
+        NVL(max(bac.ACTIVITY_COUNT), 0) AS totalActivity,
+        NVL(max(vsAgg.totalVao), 0) AS totalVao,
+        NVL(max(asb.VAO_SALES_TARGET), 0) AS vaoTarget,
+        NVL(max(asb.CONTACT_TARGET), 0) AS activityTarget
 FROM    BRUSER b
 JOIN    BRAND_REPRESENTATIVE br on b.user_id=br.br_user_user_id
 JOIN    SUPERVISOR_TMR sr on b.user_id=sr.tmr_id
@@ -23,4 +23,5 @@ LEFT    JOIN (
                 WHERE brAct.TARGET_DATE = TRUNC(SYSDATE - 1 )
                 GROUP BY brAct.BR_USER_ID
             ) vsAgg
-            ON b.USER_ID = vsAgg.BR_USER_IDs
+            ON b.USER_ID = vsAgg.BR_USER_ID
+group  by b.USER_ID,br.CONTACT_NUMBER,br.NAME
